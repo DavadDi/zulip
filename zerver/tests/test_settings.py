@@ -15,9 +15,6 @@ from zerver.models import UserProfile, get_user_profile_by_api_key
 
 
 class ChangeSettingsTest(ZulipTestCase):
-    def check_well_formed_change_settings_response(self, result: Dict[str, Any]) -> None:
-        self.assertIn("full_name", result)
-
     # DEPRECATED, to be deleted after all uses of check_for_toggle_param
     # are converted into check_for_toggle_param_patch.
     def check_for_toggle_param(self, pattern: str, param: str) -> None:
@@ -68,8 +65,6 @@ class ChangeSettingsTest(ZulipTestCase):
             ),
         )
         self.assert_json_success(json_result)
-        result = orjson.loads(json_result.content)
-        self.check_well_formed_change_settings_response(result)
 
         user.refresh_from_db()
         self.assertEqual(user.full_name, "Foo Bar")
@@ -163,27 +158,25 @@ class ChangeSettingsTest(ZulipTestCase):
             #
             # TODO: Make this work more like do_test_realm_update_api
             if notification_setting != "notification_sound":
-                self.check_for_toggle_param_patch(
-                    "/json/settings/notifications", notification_setting
-                )
+                self.check_for_toggle_param_patch("/json/settings", notification_setting)
 
     def test_change_notification_sound(self) -> None:
-        pattern = "/json/settings/notifications"
+        pattern = "/json/settings"
         param = "notification_sound"
         user_profile = self.example_user("hamlet")
         self.login_user(user_profile)
 
-        json_result = self.client_patch(pattern, {param: orjson.dumps("invalid").decode()})
+        json_result = self.client_patch(pattern, {param: "invalid"})
         self.assert_json_error(json_result, "Invalid notification sound 'invalid'")
 
-        json_result = self.client_patch(pattern, {param: orjson.dumps("ding").decode()})
+        json_result = self.client_patch(pattern, {param: "ding"})
         self.assert_json_success(json_result)
 
         # refetch user_profile object to correctly handle caching
         user_profile = self.example_user("hamlet")
         self.assertEqual(getattr(user_profile, param), "ding")
 
-        json_result = self.client_patch(pattern, {param: orjson.dumps("zulip").decode()})
+        json_result = self.client_patch(pattern, {param: "zulip"})
 
         self.assert_json_success(json_result)
         # refetch user_profile object to correctly handle caching
@@ -196,7 +189,7 @@ class ChangeSettingsTest(ZulipTestCase):
             s for s in UserProfile.property_types if UserProfile.property_types[s] is bool
         )
         for display_setting in boolean_settings:
-            self.check_for_toggle_param_patch("/json/settings/display", display_setting)
+            self.check_for_toggle_param_patch("/json/settings", display_setting)
 
     def test_enter_sends_setting(self) -> None:
         self.check_for_toggle_param("/json/users/me/enter-sends", "enter_sends")
@@ -322,16 +315,6 @@ class ChangeSettingsTest(ZulipTestCase):
             )
             self.assert_json_error(result, "Your Zulip password is managed in LDAP")
 
-    def test_changing_nothing_returns_error(self) -> None:
-        """
-        We need to supply at least one non-empty parameter
-        to this API, or it should fail.  (Eventually, we should
-        probably use a patch interface for these changes.)
-        """
-        self.login("hamlet")
-        result = self.client_patch("/json/settings", dict(old_password="ignored"))
-        self.assert_json_error(result, "Please fill out all fields.")
-
     def do_test_change_user_display_setting(self, setting_name: str) -> None:
 
         test_changes: Dict[str, Any] = dict(
@@ -353,18 +336,25 @@ class ChangeSettingsTest(ZulipTestCase):
             invalid_value: Any = 100
         else:
             invalid_value = "invalid_" + setting_name
-        data = {setting_name: orjson.dumps(test_value).decode()}
 
-        result = self.client_patch("/json/settings/display", data)
+        if setting_name not in ["demote_inactive_streams", "color_scheme"]:
+            data = {setting_name: test_value}
+        else:
+            data = {setting_name: orjson.dumps(test_value).decode()}
+
+        result = self.client_patch("/json/settings", data)
         self.assert_json_success(result)
         user_profile = self.example_user("hamlet")
         self.assertEqual(getattr(user_profile, setting_name), test_value)
 
         # Test to make sure invalid settings are not accepted
         # and saved in the db.
-        data = {setting_name: orjson.dumps(invalid_value).decode()}
+        if setting_name not in ["demote_inactive_streams", "color_scheme"]:
+            data = {setting_name: invalid_value}
+        else:
+            data = {setting_name: orjson.dumps(invalid_value).decode()}
 
-        result = self.client_patch("/json/settings/display", data)
+        result = self.client_patch("/json/settings", data)
         # the json error for multiple word setting names (ex: default_language)
         # displays as 'Invalid language'. Using setting_name.split('_') to format.
         self.assert_json_error(result, f"Invalid {setting_name}")
@@ -379,11 +369,12 @@ class ChangeSettingsTest(ZulipTestCase):
         )
         for setting in user_settings:
             self.do_test_change_user_display_setting(setting)
+        self.do_test_change_user_display_setting("timezone")
 
     def do_change_emojiset(self, emojiset: str) -> HttpResponse:
         self.login("hamlet")
-        data = {"emojiset": orjson.dumps(emojiset).decode()}
-        result = self.client_patch("/json/settings/display", data)
+        data = {"emojiset": emojiset}
+        result = self.client_patch("/json/settings", data)
         return result
 
     def test_emojiset(self) -> None:
@@ -410,6 +401,46 @@ class ChangeSettingsTest(ZulipTestCase):
             with get_test_image_file("img.png") as fp1:
                 result = self.client_post("/json/users/me/avatar", {"f1": fp1})
             self.assert_json_error(result, "Avatar changes are disabled in this organization.", 400)
+
+    def test_invalid_setting_name(self) -> None:
+        self.login("hamlet")
+
+        # Now try an invalid setting name
+        json_result = self.client_patch("/json/settings", dict(invalid_setting="value"))
+        self.assert_json_success(json_result)
+
+        result = orjson.loads(json_result.content)
+        self.assertIn("ignored_parameters_unsupported", result)
+        self.assertEqual(result["ignored_parameters_unsupported"], ["invalid_setting"])
+
+    def test_changing_setting_using_display_setting_endpoint(self) -> None:
+        """
+        This test is just for adding coverage for `/settings/display` endpoint which is
+        now depreceated.
+        """
+        self.login("hamlet")
+
+        result = self.client_patch(
+            "/json/settings/display", dict(color_scheme=UserProfile.COLOR_SCHEME_NIGHT)
+        )
+        self.assert_json_success(result)
+        hamlet = self.example_user("hamlet")
+        self.assertEqual(hamlet.color_scheme, UserProfile.COLOR_SCHEME_NIGHT)
+
+    def test_changing_setting_using_notification_setting_endpoint(self) -> None:
+        """
+        This test is just for adding coverage for `/settings/notifications` endpoint which is
+        now depreceated.
+        """
+        self.login("hamlet")
+
+        result = self.client_patch(
+            "/json/settings/notifications",
+            dict(enable_stream_desktop_notifications=orjson.dumps(True).decode()),
+        )
+        self.assert_json_success(result)
+        hamlet = self.example_user("hamlet")
+        self.assertEqual(hamlet.enable_stream_desktop_notifications, True)
 
 
 class UserChangesTest(ZulipTestCase):

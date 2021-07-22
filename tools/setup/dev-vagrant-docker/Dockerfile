@@ -3,8 +3,8 @@ FROM ubuntu:18.04
 ARG UBUNTU_MIRROR
 
 # Basic packages and dependencies of docker-systemctl-replacement
-RUN echo locales locales/default_environment_locale select en_US.UTF-8 | debconf-set-selections \
-    && echo locales locales/locales_to_be_generated select "en_US.UTF-8 UTF-8" | debconf-set-selections \
+RUN echo locales locales/default_environment_locale select C.UTF-8 | debconf-set-selections \
+    && echo locales locales/locales_to_be_generated select "C.UTF-8 UTF-8" | debconf-set-selections \
     && { [ ! "$UBUNTU_MIRROR" ] || sed -i "s|http://\(\w*\.\)*archive\.ubuntu\.com/ubuntu/\? |$UBUNTU_MIRROR |" /etc/apt/sources.list; } \
     # This restores man pages and other documentation that have been
     # stripped from the default Ubuntu cloud image and installs
@@ -32,7 +32,7 @@ RUN \
     # managed by systemd start within Docker, which breaks normal
     # operation of systemd.
     dpkg-divert --add --rename /bin/systemctl \
-    && curl -so /bin/systemctl 'https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/73b5aff2ba6abfd254d236f1df22ff4971d44660/files/docker/systemctl3.py' \
+    && curl -fLsS -o /bin/systemctl 'https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/73b5aff2ba6abfd254d236f1df22ff4971d44660/files/docker/systemctl3.py' \
     && chmod +x /bin/systemctl \
     && ln -nsf /bin/true /usr/sbin/policy-rc.d \
     && mkdir -p /run/sshd \
@@ -48,7 +48,7 @@ RUN \
     # Set up the vagrant user and its SSH key (globally public)
     && useradd -ms /bin/bash -u "$VAGRANT_UID" vagrant \
     && mkdir -m 700 ~vagrant/.ssh \
-    && curl -so ~vagrant/.ssh/authorized_keys 'https://raw.githubusercontent.com/hashicorp/vagrant/be7876d83644aa6bdf7f951592fdc681506bcbe6/keys/vagrant.pub' \
+    && curl -fLsS -o ~vagrant/.ssh/authorized_keys 'https://raw.githubusercontent.com/hashicorp/vagrant/be7876d83644aa6bdf7f951592fdc681506bcbe6/keys/vagrant.pub' \
     && chown -R vagrant: ~vagrant/.ssh \
     && echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/vagrant
 

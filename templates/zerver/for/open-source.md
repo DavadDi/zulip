@@ -1,3 +1,13 @@
+[Zulip Standard](/plans) is free for open-source communities! To join the
+hundreds of open-source projects we sponsor, you can request sponsorship
+from your organization's
+[billing page](/accounts/go/?next=/upgrade%23sponsorship), or contact us at
+[sales@zulip.com](mailto:sales@zulip.com) to check whether your organization
+qualifies.
+
+
+------------------------------------------
+
 The Zulip core developers have decades of combined experience leading
 and growing open source communities. We use Zulip to fashion the
 day-to-day experience of being a part of our project. No other chat
@@ -90,16 +100,6 @@ community succeed too!
 Below, we’ve collected a list of [Zulip features](/features) that are
 particularly useful to open source communities.
 
-### Free hosting at zulip.com.
-
-Zulip sponsors free hosting for hundreds of open source projects,
-supported by (and is identical to) zulip.com’s commercial
-offerings. This offer extends to any community involved in supporting
-free and open source software: development projects, foundations,
-meetups, hackathons, conference committees, and more. If you’re not
-sure whether your organization qualifies, send us an email at
-support@zulip.com.
-
 ### Moderation suite.
 
 Moderation is a big part of making an open community work. Zulip was built
@@ -126,14 +126,19 @@ Import your existing organization from [Slack](/help/import-from-slack),
 [Mattermost](/help/import-from-mattermost), or
 [Gitter](/help/import-from-gitter).
 
-### Syntax highlighting.
+### Collaborate on code and formulas
 
-[Full Markdown support](/help/format-your-message-using-markdown), including
-syntax highlighting, makes it easy to discuss code, paste an error message,
-or explain a complicated point. Full LaTeX support as well.
+[Markdown code blocks](/help/code-blocks)
+with syntax highlighting make it easy to discuss code, paste an error
+message, or explain a complicated point. Native LaTeX support provides
+the same benefits when talking about math.
+
+You can also instantly copy a code block to your clipboard or transfer
+it to an [external code playground](/help/code-blocks#code-playgrounds) to
+interactively run and debug the code.
 
 If your community primarily uses a single programming language,
-consider setting a default language for syntax highlighting.
+consider setting a [default code block language](/help/code-blocks#default-code-block-language).
 
 ### Permalink to conversations.
 
@@ -152,7 +157,7 @@ your organization.
 
 ### Hundreds of integrations.
 
-Get events from GitHub, Travis CI, JIRA, and
+Get events from GitHub, Travis CI, Jira, and
 [hundreds of other tools](/integrations) right in Zulip. Topics give each
 issue its own place for discussion.
 

@@ -253,7 +253,6 @@ class OpenAPIArgumentsTest(ZulipTestCase):
         "/users/me/android_gcm_reg_id",
         "/users/me/apns_device_token",
         #### These personal settings endpoints have modest value to document:
-        "/settings",
         "/users/me/avatar",
         "/users/me/api_key/regenerate",
         # Much more valuable would be an org admin bulk-upload feature.
@@ -337,7 +336,7 @@ so maybe we shouldn't mark it as intentionally undocumented in the URLs.
         undocumented_paths -= self.buggy_documentation_endpoints
         undocumented_paths -= self.pending_endpoints
         try:
-            self.assertEqual(len(undocumented_paths), 0)
+            self.assert_length(undocumented_paths, 0)
         except AssertionError:  # nocoverage
             msg = "The following endpoints have been documented but can't be found in urls.py:"
             for undocumented_path in undocumented_paths:
@@ -405,7 +404,7 @@ The types for the request parameters in zerver/openapi/zulip.yaml
 do not match the types declared in the implementation of {function.__name__}.\n"""
         msg += "=" * 65 + "\n"
         msg += "{:<10s}{:^30s}{:>10s}\n".format(
-            "Parameter", "OpenAPI Type", "Function Declaration Type"
+            "parameter", "OpenAPI type", "function declaration type"
         )
         msg += "=" * 65 + "\n"
         opvtype = None

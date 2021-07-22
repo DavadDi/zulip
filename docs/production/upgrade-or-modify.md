@@ -28,7 +28,7 @@ to a new Zulip release:
     release with:
 
     ```
-    wget https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz
+    curl -fLO https://www.zulip.org/dist/releases/zulip-server-latest.tar.gz
     ```
 
     You also have the option of upgrading Zulip [to a version in a Git
@@ -188,7 +188,7 @@ help](https://chat.zulip.org/#narrow/stream/31-production-help) in the
 server](../contributing/chat-zulip-org.md) for best-effort help.
 Please include the relevant error output from the above logs in a
 [Markdown code
-block](https://zulip.com/help/format-your-message-using-markdown#code)
+block](https://zulip.com/help/code-blocks)
 in any reports.
 
 ### Rolling back to a prior version
@@ -273,12 +273,8 @@ instructions for other supported platforms.
 
     ```
     sudo -i # Or otherwise get a root shell
-    do-release-upgrade -d
+    do-release-upgrade
     ```
-
-    The `-d` option to `do-release-upgrade` is required because Ubuntu
-    20.04 is new; it will stop being necessary once the first point
-    release update of Ubuntu 20.04 LTS is released.
 
     When `do-release-upgrade` asks you how to upgrade configuration
     files for services that Zulip manages like Redis, PostgreSQL,
@@ -292,7 +288,16 @@ instructions for other supported platforms.
     /home/zulip/deployments/current/scripts/setup/upgrade-postgresql
     ```
 
-5. Finally, we need to reinstall the current version of Zulip, which
+5. Ubuntu 20.04 has a different version of the low-level glibc
+   library, which affects how PostgreSQL orders text data (known as
+   "collations"); this corrupts database indexes that rely on
+   collations.  Regenerate the affected indexes by running:
+
+   ```
+   /home/zulip/deployments/current/scripts/setup/reindex-textual-data --force
+   ```
+
+6. Finally, we need to reinstall the current version of Zulip, which
    among other things will recompile Zulip's Python module
    dependencies for your new version of Python and rewrite Zulip's
    full-text search indexes to work with the upgraded dictionary
@@ -449,7 +454,16 @@ instructions for other supported platforms.
 6. [Upgrade to the latest Zulip release](#upgrading-to-a-release), now
    that your server is running a supported operating system.
 
-7. As root, finish by verifying the contents of the full-text indexes:
+7. Debian Buster has a different version of the low-level glibc
+   library, which affects how PostgreSQL orders text data (known as
+   "collations"); this corrupts database indexes that rely on
+   collations.  Regenerate the affected indexes by running:
+
+   ```
+   /home/zulip/deployments/current/scripts/setup/reindex-textual-data --force
+   ```
+
+8. As root, finish by verifying the contents of the full-text indexes:
 
     ```
     /home/zulip/deployments/current/manage.py audit_fts_indexes

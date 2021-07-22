@@ -287,7 +287,8 @@ nav {
             user-select: none;
         }
 
-        li {
+        li,
+        div.dropdown-label {
             position: relative;
             display: inline-block;
             margin: 10px;
@@ -309,6 +310,49 @@ nav {
                     left: calc(50% - 4px);
                     font-weight: 100;
                     transform: scaleX(2) scaleY(0.5);
+                }
+            }
+
+            i.fa-chevron-down {
+                position: relative;
+                top: -2px;
+                font-size: 0.6em;
+                margin-left: 5px;
+                transition: all 0.2s ease;
+            }
+        }
+    }
+
+    .nav-dropdown {
+        padding-bottom: 3px;
+        ul {
+            width: 300px;
+        }
+
+        @media (width > 686px) {
+            ul.product-options {
+                width: 125px;
+            }
+
+            ul.solutions-options {
+                width: 450px;
+
+                div.dropdown-column {
+                    float: left;
+                    &:first-of-type {
+                        width: 40%;
+                    }
+                }
+            }
+
+            ul.resources-options {
+                width: 350px;
+
+                div.dropdown-column {
+                    float: left;
+                    &:first-of-type {
+                        width: 40%;
+                    }
                 }
             }
         }
@@ -2144,10 +2188,11 @@ nav {
     vertical-align: top;
 
     width: 50px;
-    padding: 20px 30px;
+    padding: 18px 30px;
     border-radius: 70px;
 
-    color: hsl(0, 0%, 80%);
+    /* Reset color since we don't want default link styling. */
+    color: hsl(0, 0%, 27%);
 
     font-size: 3em;
     text-align: center;
@@ -2156,13 +2201,16 @@ nav {
 }
 
 .portico-landing.apps .other-apps .apps .icon:hover {
-    color: hsl(0, 0%, 47%);
     background: linear-gradient(-45deg, hsl(0, 0%, 83%), hsl(0, 0%, 98%));
 }
 
 .portico-landing.apps .other-apps .apps .icon.fa-mobile-phone {
     font-size: 4em;
-    padding: 11.5px 27px;
+    padding: 14px 30px;
+}
+
+.portico-landing.apps .other-apps .apps .icon.fa-terminal {
+    padding: 12px 30px;
 }
 
 .portico-landing.apps .other-apps .apps .icon.fa-mobile-phone::after {
@@ -2202,6 +2250,10 @@ nav {
 .portico-landing.why-page .hero {
     padding: 200px 50px 100px 50px;
 
+    &.empty-hero {
+        padding: 50px 50px 70px 50px;
+    }
+
     background-color: hsl(153, 32%, 55%);
     color: hsl(0, 0%, 100%);
 }
@@ -2211,6 +2263,7 @@ nav {
 }
 
 .portico-landing.why-page .hero h1 {
+    position: relative;
     margin: 0 0 20px 0;
 
     font-size: 3.5em;
@@ -2282,6 +2335,14 @@ nav {
     margin-top: 20px;
 }
 
+.portico-landing.why-page .bg-education {
+    position: relative;
+
+    background-image: url(../../images/landing-page/education/for-education-cover.jpg);
+    background-size: cover;
+    background-position: center;
+}
+
 .portico-landing.why-page .bg-pycon {
     position: relative;
 
@@ -2306,7 +2367,7 @@ nav {
     background-image: url(../../images/landing-page/why-zulip-threads.jpg);
 }
 
-.portico-landing.why-page .bg-pycon .bg-dimmer {
+.portico-landing.why-page .bg-dimmer {
     position: absolute;
     width: 100%;
     height: 100%;
@@ -2806,6 +2867,10 @@ nav {
     color: hsl(0, 0%, 53%);
     font-style: italic;
     text-align: center;
+
+    &.multi-line {
+        padding: 0 0 30px 0;
+    }
 }
 
 .pricing-overlay.pricing-model .info-box .image {
@@ -3478,6 +3543,8 @@ nav {
 
             transition: all 0.5s ease;
 
+            overflow-y: auto;
+
             &.show {
                 transform: translate(0, 0);
             }
@@ -3493,15 +3560,12 @@ nav {
                 color: initial;
             }
 
-            li {
+            li,
+            div.dropdown div.dropdown-label {
                 display: block;
                 font-size: 1.5em;
                 font-weight: 300;
                 line-height: 1.5;
-
-                &:first-of-type {
-                    margin-top: 20px;
-                }
 
                 &.active {
                     font-weight: 400;
@@ -3515,13 +3579,54 @@ nav {
                     }
                 }
             }
+
+            div.dropdown div.dropdown-label.first {
+                margin-top: 30px;
+            }
+
+            div.dropdown ul.dropdown-list {
+                position: relative;
+                box-shadow: none;
+                padding-left: 10px;
+                border: none;
+
+                li {
+                    &:hover {
+                        background-color: unset;
+                    }
+                }
+            }
+
+            .nav-dropdown {
+                ul.resources-options,
+                ul.solutions-options {
+                    div.dropdown-column {
+                        float: none;
+
+                        &:first-child {
+                            padding-bottom: 20px;
+                        }
+
+                        li.nav-header {
+                            font-size: 1em;
+                        }
+                    }
+                }
+            }
+        }
+
+        &.portico-header {
+            div.content ul div.nav-dropdown {
+                display: block;
+                padding-bottom: 0;
+            }
         }
     }
 
     .portico-header .content > ul::before {
         content: "Zulip";
         display: block;
-        margin-top: 20px;
+        margin-top: 25px;
         padding-top: 5px;
         margin-left: 10px;
 
@@ -3547,6 +3652,7 @@ nav {
 
     nav ul li,
     nav ul li a,
+    nav ul div.dropdown div.dropdown-label,
     .portico-header .dropdown-pill .realm-name {
         color: hsl(0, 0%, 27%) !important;
     }
@@ -3857,9 +3963,350 @@ nav {
     }
 }
 
-#download-android-apk a {
+#download-android-apk,
+#download-mac-arm64 {
     display: inline-block;
     color: hsl(0, 0%, 100%);
     font-size: 13px;
     padding-left: 10px;
+}
+
+.feature-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 50px 4vw 10px;
+
+    .feature-half {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .md-hide {
+        display: none;
+    }
+
+    .md-display {
+        display: block;
+    }
+
+    @media (width <= 768px) {
+        .feature-text {
+            margin-bottom: 10px;
+        }
+
+        .twitter-tweet {
+            margin: 30px auto !important;
+        }
+    }
+
+    @media (width >= 768px) {
+        display: grid;
+        grid-column-gap: 5%;
+        grid-template-columns: 43% auto;
+        max-width: 1300px;
+        align-items: center;
+        justify-items: center;
+        margin: auto;
+
+        .alternate-grid& {
+            grid-template-columns: auto 43%;
+        }
+
+        .feature-half {
+            display: block;
+        }
+
+        .md-display {
+            display: none !important;
+        }
+    }
+
+    .feature-text {
+        h1 {
+            font-size: 30px;
+            font-weight: 600;
+        }
+
+        ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        ul li {
+            margin-bottom: 15px;
+
+            &::before {
+                float: left;
+                background-repeat: no-repeat;
+                content: "";
+                width: 18px;
+                height: 18px;
+                margin-right: 5px;
+                margin-top: 2px;
+                background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1.25 17.292l-4.5-4.364 1.857-1.858 2.643 2.506 5.643-5.784 1.857 1.857-7.5 7.643z"/></svg>');
+            }
+
+            .list-content {
+                margin-left: 22px;
+            }
+        }
+    }
+
+    .feature-image {
+        img,
+        div.quote {
+            width: 400px;
+        }
+    }
+
+    .feature-buttons {
+        margin: 0 auto;
+    }
+}
+
+.twitter-tweet {
+    margin: auto;
+}
+
+.discounts-section {
+    text-align: center;
+
+    header {
+        b {
+            font-weight: 600;
+            color: hsl(169, 45%, 43%);
+        }
+    }
+}
+
+.register-buttons {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    margin: 20px;
+}
+
+/* Common button styles */
+.register-now {
+    font-size: 15px;
+    margin: 10px 20px;
+    float: left;
+    width: 200px;
+    display: block;
+    border: 2px solid;
+    border-radius: 4px;
+    background: none;
+    color: inherit;
+    vertical-align: middle;
+    position: relative;
+    z-index: 1;
+    backface-visibility: hidden;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    overflow: hidden;
+    transition: border-color 0.3s, background-color 0.3s;
+    transition-timing-function: cubic-bezier(0.2, 1, 0.3, 1);
+    font-weight: 800;
+    padding: 15px 5px;
+
+    &:focus {
+        outline: none;
+    }
+
+    p {
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    &:hover {
+        border-color: hsl(169, 45%, 43%);
+        background-color: hsl(170, 47%, 53%);
+        color: hsl(0, 0%, 100%);
+    }
+}
+
+.quote {
+    background: hsl(218, 46%, 43%);
+    padding: 1em;
+    border-radius: 1em;
+    font-weight: 400;
+    margin: 40px 5px;
+
+    a {
+        color: hsl(0, 0%, 100%);
+        &.case-study-link {
+            margin-left: 20px;
+            text-decoration: underline;
+        }
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .author,
+    blockquote {
+        color: hsl(0, 0%, 100%);
+        margin: 5px 20px 20px;
+    }
+
+    blockquote {
+        font-size: 18px;
+    }
+
+    blockquote::before {
+        font-size: 20px;
+        font-weight: 800;
+    }
+}
+
+.solutions-page {
+    .hero-text {
+        position: relative;
+        width: 80%;
+        max-width: 700px;
+        margin: 40px auto;
+        font-size: 20px;
+        text-align: center;
+        font-weight: bolder;
+        opacity: 0.9;
+
+        a {
+            color: hsl(170, 76%, 64%);
+        }
+    }
+
+    .hero-buttons {
+        display: flex;
+        flex-flow: row wrap;
+        justify-content: center;
+
+        a {
+            color: hsl(170, 47%, 33%);
+            font-weight: 600;
+            font-size: 15px;
+            margin: 10px;
+
+            &:hover {
+                color: hsl(0, 0%, 100%);
+                background-color: hsl(170, 47%, 33%);
+                border-color: hsl(170, 47%, 33%);
+            }
+        }
+    }
+
+    .feature-end {
+        @media (width >= 768px) {
+            margin: 10px;
+        }
+
+        h1 {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 0;
+        }
+
+        ul {
+            margin: auto;
+            max-width: 800px;
+            padding: 30px;
+        }
+
+        p {
+            margin: auto;
+            max-width: 800px;
+            padding: 30px;
+        }
+    }
+
+    .price-asterisk {
+        text-align: center;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        font-size: 15px;
+        opacity: 0.8;
+        max-width: 560px !important;
+    }
+}
+
+.bottom-register-buttons {
+    max-width: 800px;
+    margin: auto;
+
+    h1 {
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .hero-buttons {
+        margin: 20px;
+    }
+}
+
+.for-education.pricing-model {
+    .padded-content {
+        padding-bottom: 10px;
+    }
+
+    .pricing-container {
+        display: flex;
+        flex-flow: row wrap;
+        justify-content: center;
+
+        .pricing-details {
+            color: inherit;
+            font-style: inherit;
+        }
+
+        .price-box {
+            margin: 10px;
+            height: 625px;
+
+            .bottom {
+                height: 275px;
+
+                .standard-register-button {
+                    margin-top: 10px;
+                }
+
+                .free-text {
+                    margin-top: 90px;
+
+                    .pricing-details {
+                        font-size: 34px;
+                    }
+
+                    a {
+                        margin-top: 76px;
+                    }
+                }
+
+                .standard-price-box {
+                    flex-flow: row wrap;
+                    height: 90px;
+                    font-size: 15px;
+
+                    &:first-child {
+                        padding-bottom: 10px;
+                    }
+
+                    p {
+                        padding: 0;
+                        margin: 0 0 -10px 0;
+                        width: 100%;
+                        text-align: center;
+                        font-weight: 550;
+                        color: hsl(169, 46%, 33%);
+                    }
+                }
+            }
+        }
+    }
 }

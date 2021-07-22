@@ -2,13 +2,8 @@
 
 VAGRANTFILE_API_VERSION = "2"
 
-def command?(name)
-  `which #{name} > /dev/null 2>&1`
-  $?.success?
-end
-
 if Vagrant::VERSION == "1.8.7"
-  path = `which curl`
+  path = `command -v curl`
   if path.include?("/opt/vagrant/embedded/bin/curl")
     puts "In Vagrant 1.8.7, curl is broken. Please use Vagrant 2.0.2 " \
          "or run 'sudo rm -f /opt/vagrant/embedded/bin/curl' to fix the " \
@@ -166,8 +161,8 @@ sudo dpkg-divert --add --rename /etc/default/motd-news
 sudo sh -c 'echo ENABLED=0 > /etc/default/motd-news'
 
 # Set default locale, this prevents errors if the user has another locale set.
-if ! grep -q 'LC_ALL=en_US.UTF-8' /etc/default/locale; then
-    echo "LC_ALL=en_US.UTF-8" | sudo tee -a /etc/default/locale
+if ! grep -q 'LC_ALL=C.UTF-8' /etc/default/locale; then
+    echo "LC_ALL=C.UTF-8" | sudo tee -a /etc/default/locale
 fi
 
 # Set an environment variable, so that we won't print the virtualenv

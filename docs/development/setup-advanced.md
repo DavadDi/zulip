@@ -16,7 +16,7 @@ that's running one of:
 * Ubuntu 20.04 Focal, 18.04 Bionic
 * Debian 10 Buster, 11 Bullseye (beta)
 * CentOS 7 (beta)
-* Fedora 33 (beta)
+* Fedora 33 and 34 (beta)
 * RHEL 7 (beta)
 
 You can just run the Zulip provision script on your machine.
@@ -242,7 +242,6 @@ expected.
       9992: Django
       9993: Tornado
       9994: webpack
-      9995: Thumbor
    ```
 
    Visit the indicated URL in your web browser.

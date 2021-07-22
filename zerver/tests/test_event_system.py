@@ -1,21 +1,29 @@
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional
 from unittest import mock
 
 import orjson
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
+from django.utils.timezone import now as timezone_now
 
 from version import API_FEATURE_LEVEL, ZULIP_VERSION
-from zerver.lib.actions import check_send_message, do_change_user_role, do_set_realm_property
+from zerver.lib.actions import (
+    check_send_message,
+    do_change_user_role,
+    do_set_realm_property,
+    do_update_user_presence,
+)
 from zerver.lib.event_schema import check_restart_event
-from zerver.lib.events import fetch_initial_state_data, get_raw_user_data
+from zerver.lib.events import fetch_initial_state_data
+from zerver.lib.exceptions import AccessDeniedError
 from zerver.lib.test_classes import ZulipTestCase
 from zerver.lib.test_helpers import HostRequestMock, queries_captured, stub_event_queue_user_events
-from zerver.lib.users import get_api_key
+from zerver.lib.users import get_api_key, get_raw_user_data
 from zerver.models import (
     Realm,
     UserMessage,
+    UserPresence,
     UserProfile,
     flush_per_request_caches,
     get_client,
@@ -183,8 +191,10 @@ class EventsEndpointTest(ZulipTestCase):
         )
         req = HostRequestMock(post_data, user_profile=None)
         req.META["REMOTE_ADDR"] = "127.0.0.1"
-        result = self.client_post_request("/notify_tornado", req)
-        self.assert_json_error(result, "Access denied", status_code=403)
+        with self.assertRaises(AccessDeniedError) as context:
+            result = self.client_post_request("/notify_tornado", req)
+        self.assertEqual(str(context.exception), "Access denied")
+        self.assertEqual(context.exception.http_status_code, 403)
 
         post_data["secret"] = settings.SHARED_SECRET
         req = HostRequestMock(post_data, user_profile=None)
@@ -328,7 +338,7 @@ class GetEventsTest(ZulipTestCase):
         )
         recipient_events = orjson.loads(recipient_result.content)["events"]
         self.assert_json_success(recipient_result)
-        self.assertEqual(len(recipient_events), 2)
+        self.assert_length(recipient_events, 2)
         self.assertEqual(recipient_events[0]["type"], "message")
         self.assertEqual(recipient_events[0]["message"]["sender_email"], email)
         self.assertTrue("local_message_id" not in recipient_events[0])
@@ -429,7 +439,7 @@ class FetchInitialStateDataTest(ZulipTestCase):
         do_change_user_role(user_profile, UserProfile.ROLE_REALM_ADMINISTRATOR, acting_user=None)
         self.assertTrue(user_profile.is_realm_admin)
         result = fetch_initial_state_data(user_profile)
-        self.assertTrue(len(result["realm_bots"]) > 2)
+        self.assertGreater(len(result["realm_bots"]), 2)
 
     def test_max_message_id_with_no_history(self) -> None:
         user_profile = self.example_user("aaron")
@@ -567,7 +577,7 @@ class ClientDescriptorsTest(ZulipTestCase):
             users=[],
         )
 
-        self.assertEqual(len(client_info), 1)
+        self.assert_length(client_info, 1)
 
         dct = client_info[client.event_queue.id]
         self.assertEqual(dct["client"].apply_markdown, True)
@@ -622,7 +632,7 @@ class ClientDescriptorsTest(ZulipTestCase):
                 ],
             )
 
-            self.assertEqual(len(client_info), 0)
+            self.assert_length(client_info, 0)
 
             client_info = get_client_info_for_message_event(
                 message_event,
@@ -631,7 +641,7 @@ class ClientDescriptorsTest(ZulipTestCase):
                     dict(id=hamlet.id, flags=["mentioned"]),
                 ],
             )
-            self.assertEqual(len(client_info), 1)
+            self.assert_length(client_info, 1)
 
             dct = client_info[client.event_queue.id]
             self.assertEqual(dct["client"].apply_markdown, apply_markdown)
@@ -870,7 +880,7 @@ class RestartEventsTest(ZulipTestCase):
         # may decide to write a deeper test in the future
         # that exercises the finish_handler.
         virtual_events = client.event_queue.virtual_events
-        self.assertEqual(len(virtual_events), 1)
+        self.assert_length(virtual_events, 1)
         restart_event = virtual_events["restart"]
 
         check_restart_event("restart_event", restart_event)
@@ -970,7 +980,7 @@ class FetchQueriesTest(ZulipTestCase):
             with mock.patch("zerver.lib.events.always_want") as want_mock:
                 fetch_initial_state_data(user)
 
-        self.assert_length(queries, 31)
+        self.assert_length(queries, 33)
 
         expected_counts = dict(
             alert_words=1,
@@ -1111,3 +1121,27 @@ class TestGetRawUserDataSystemBotRealm(ZulipTestCase):
             bot_profile = get_system_bot(bot_email)
             self.assertTrue(bot_profile.id in result)
             self.assertTrue(result[bot_profile.id]["is_cross_realm_bot"])
+
+
+class TestUserPresenceUpdatesDisabled(ZulipTestCase):
+    def test_presence_events_diabled_on_larger_realm(self) -> None:
+        # First check that normally the mocked function gets called.
+        events: List[Mapping[str, Any]] = []
+        with self.tornado_redirected_to_list(events, expected_num_events=1):
+            do_update_user_presence(
+                self.example_user("cordelia"),
+                get_client("website"),
+                timezone_now(),
+                UserPresence.ACTIVE,
+            )
+
+        # Now check that if the realm has more than the USER_LIMIT_FOR_SENDING_PRESENCE_UPDATE_EVENTS
+        # amount of active users, send_event doesn't get called.
+        with self.tornado_redirected_to_list(events, expected_num_events=0):
+            with self.settings(USER_LIMIT_FOR_SENDING_PRESENCE_UPDATE_EVENTS=1):
+                do_update_user_presence(
+                    self.example_user("hamlet"),
+                    get_client("website"),
+                    timezone_now(),
+                    UserPresence.ACTIVE,
+                )

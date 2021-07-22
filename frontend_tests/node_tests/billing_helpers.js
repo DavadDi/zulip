@@ -5,7 +5,7 @@ const fs = require("fs");
 
 const {JSDOM} = require("jsdom");
 
-const {mock_cjs, mock_esm, set_global, zrequire} = require("../zjsunit/namespace");
+const {mock_esm, set_global, zrequire} = require("../zjsunit/namespace");
 const jQueryFactory = require("../zjsunit/real_jquery");
 const {run_test} = require("../zjsunit/test");
 const $ = require("../zjsunit/zjquery");
@@ -14,8 +14,6 @@ const {page_params} = require("../zjsunit/zpage_params");
 const template = fs.readFileSync("templates/corporate/upgrade.html", "utf-8");
 const dom = new JSDOM(template, {pretendToBeVisual: true});
 const jquery = jQueryFactory(dom.window);
-
-mock_cjs("jquery", $);
 
 const history = set_global("history", {});
 const loading = mock_esm("../../static/js/loading");
@@ -30,7 +28,7 @@ const location = set_global("location", {
 
 const helpers = zrequire("billing/helpers");
 
-run_test("create_ajax_request", (override) => {
+run_test("create_ajax_request", ({override}) => {
     const form_loading_indicator = "#autopay_loading_indicator";
     const form_input_section = "#autopay-input-section";
     const form_success = "#autopay-success";
@@ -51,7 +49,6 @@ run_test("create_ajax_request", (override) => {
         zulip_limited_section_hide: 0,
         free_trial_alert_message_hide: 0,
         free_trial_alert_message_show: 0,
-        location_reload: 0,
         pushState: 0,
         make_indicator: 0,
     };
@@ -114,7 +111,12 @@ run_test("create_ajax_request", (override) => {
 
     $("#autopay-form").serializeArray = () => jquery("#autopay-form").serializeArray();
 
-    override($, "post", ({url, data, success, error}) => {
+    let success_callback_called = false;
+    const success_callback = (response) => {
+        assert.equal(response.result, "success");
+        success_callback_called = true;
+    };
+    override($, "ajax", ({type, url, data, success, error}) => {
         assert.equal(state.form_input_section_hide, 1);
         assert.equal(state.form_error_hide, 1);
         assert.equal(state.form_loading_show, 1);
@@ -124,17 +126,19 @@ run_test("create_ajax_request", (override) => {
         assert.equal(state.free_trial_alert_message_show, 0);
         assert.equal(state.make_indicator, 1);
 
+        assert.equal(type, "PATCH");
         assert.equal(url, "/json/billing/upgrade");
 
-        assert.equal(Object.keys(data).length, 8);
-        assert.equal(data.stripe_token, '"stripe_token_id"');
-        assert.equal(data.seat_count, '"{{ seat_count }}"');
-        assert.equal(data.signed_seat_count, '"{{ signed_seat_count }}"');
-        assert.equal(data.salt, '"{{ salt }}"');
-        assert.equal(data.billing_modality, '"charge_automatically"');
-        assert.equal(data.schedule, '"monthly"');
-        assert.equal(data.license_management, '"automatic"');
+        assert.equal(Object.keys(data).length, 7);
+        assert.equal(data.stripe_token, "stripe_token_id");
+        assert.equal(data.seat_count, "{{ seat_count }}");
+        assert.equal(data.signed_seat_count, "{{ signed_seat_count }}");
+        assert.equal(data.salt, "{{ salt }}");
+        assert.equal(data.billing_modality, "charge_automatically");
+        assert.equal(data.schedule, "monthly");
         assert.equal(data.licenses, "");
+
+        assert.ok(!("license_management" in data));
 
         history.pushState = (state_object, title, path) => {
             state.pushState += 1;
@@ -143,18 +147,8 @@ run_test("create_ajax_request", (override) => {
             assert.equal(path, "/upgrade/");
         };
 
-        location.reload = () => {
-            state.location_reload += 1;
-        };
+        success({result: "success"});
 
-        window.location.replace = (reload_to) => {
-            state.location_reload += 1;
-            assert.equal(reload_to, "/billing");
-        };
-
-        success();
-
-        assert.equal(state.location_reload, 1);
         assert.equal(state.pushState, 1);
         assert.equal(state.form_success_show, 1);
         assert.equal(state.form_error_hide, 2);
@@ -163,6 +157,7 @@ run_test("create_ajax_request", (override) => {
         assert.equal(state.zulip_limited_section_show, 0);
         assert.equal(state.free_trial_alert_message_hide, 1);
         assert.equal(state.free_trial_alert_message_show, 0);
+        assert.ok(success_callback_called);
 
         error({responseText: '{"msg": "response_message"}'});
 
@@ -174,9 +169,14 @@ run_test("create_ajax_request", (override) => {
         assert.equal(state.free_trial_alert_message_show, 1);
     });
 
-    helpers.create_ajax_request("/json/billing/upgrade", "autopay", {id: "stripe_token_id"}, [
-        "licenses",
-    ]);
+    helpers.create_ajax_request(
+        "/json/billing/upgrade",
+        "autopay",
+        {id: "stripe_token_id"},
+        ["license_management"],
+        "PATCH",
+        success_callback,
+    );
 });
 
 run_test("format_money", () => {

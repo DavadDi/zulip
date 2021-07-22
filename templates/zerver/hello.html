@@ -141,8 +141,16 @@
                         </div>
                     </div>
 
-                    <a class="carousel-control left visibility-control hide" href="#tour-carousel" data-slide="prev"><i class="fa fa-chevron-left" aria-hidden="true"></i></a>
-                    <a class="carousel-control right visibility-control" href="#tour-carousel" data-slide="next"><i class="fa fa-chevron-right" aria-hidden="true"></i></a>
+                    <a class="carousel-control left visibility-control hide"
+                      href="#tour-carousel" data-slide="prev"
+                      aria-label="{{ _('Previous') }}" title="{{ _('Previous') }}">
+                        <i class="fa fa-chevron-left"></i>
+                    </a>
+                    <a class="carousel-control right visibility-control"
+                      href="#tour-carousel" data-slide="next"
+                      aria-label="{{ _('Next') }}" title="{{ _('Next') }}">
+                        <i class="fa fa-chevron-right"></i>
+                    </a>
                     <ol class="carousel-indicators">
                         <li data-target="#tour-carousel" data-slide-to="0" class="active"></li>
                         <li data-target="#tour-carousel" data-slide-to="1"></li>
@@ -378,8 +386,7 @@
             <p>
                 Zulip has more than 90 native integrations. Several hundred more
                 are available through
-                <a href="/integrations/doc/hubot">Hubot</a>,
-                <a href="/integrations/doc/zapier">Zapier</a>,
+                <a href="/integrations/doc/zapier">Zapier</a>
                 and
                 <a href="/integrations/doc/ifttt">IFTTT</a>.
             </p>
@@ -417,8 +424,8 @@
             </a>
             <a href="/integrations/doc/jira">
                 <div class="group">
-                    <img class="integration-logo" src="/static/images/integrations/logos/jira.svg" alt="{{ _('JIRA logo') }}" />
-                    <h3 class="integration-name">JIRA</h3>
+                    <img class="integration-logo" src="/static/images/integrations/logos/jira.svg" alt="{{ _('Jira logo') }}" />
+                    <h3 class="integration-name">Jira</h3>
                     <p class="integration-description">Monitor project bugs and issues</p>
                 </div>
             </a>

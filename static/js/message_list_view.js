@@ -19,13 +19,14 @@ import * as message_edit from "./message_edit";
 import * as message_lists from "./message_lists";
 import * as message_store from "./message_store";
 import * as message_viewport from "./message_viewport";
-import * as muting from "./muting";
+import * as muted_topics from "./muted_topics";
+import * as muted_users from "./muted_users";
 import * as narrow_state from "./narrow_state";
 import {page_params} from "./page_params";
 import * as people from "./people";
 import * as popovers from "./popovers";
 import * as reactions from "./reactions";
-import * as recent_topics from "./recent_topics";
+import * as recent_topics_util from "./recent_topics_util";
 import * as rendered_markdown from "./rendered_markdown";
 import * as rows from "./rows";
 import * as stream_data from "./stream_data";
@@ -154,12 +155,13 @@ function populate_group_from_message_container(group, message_container) {
             // Hack to handle unusual cases like the tutorial where
             // the streams used don't actually exist in the subs
             // module.  Ideally, we'd clean this up by making the
-            // tutorial populate subs.js "properly".
+            // tutorial populate stream_settings_ui.js "properly".
             group.stream_id = -1;
         } else {
             group.stream_id = sub.stream_id;
         }
-        group.topic_muted = muting.is_topic_muted(group.stream_id, group.topic);
+        group.topic_is_resolved = group.topic.startsWith(message_edit.RESOLVED_TOPIC_PREFIX);
+        group.topic_muted = muted_topics.is_topic_muted(group.stream_id, group.topic);
     } else if (group.is_private) {
         group.pm_with_url = message_container.pm_with_url;
         group.display_reply_to = message_store.get_pm_full_names(message_container.msg);
@@ -223,10 +225,11 @@ export class MessageListView {
         //   * `edited_status_msg`       -- when label appears for a "/me" message.
         const last_edit_timestr = this._get_msg_timestring(message_container);
         const include_sender = message_container.include_sender;
+        const is_hidden = message_container.is_hidden;
         const status_message = Boolean(message_container.status_message);
         if (last_edit_timestr !== undefined) {
             message_container.last_edit_timestr = last_edit_timestr;
-            message_container.edited_in_left_col = !include_sender;
+            message_container.edited_in_left_col = !include_sender && !is_hidden;
             message_container.edited_alongside_sender = include_sender && !status_message;
             message_container.edited_status_msg = include_sender && status_message;
         } else {
@@ -237,11 +240,35 @@ export class MessageListView {
         }
     }
 
-    set_calculated_message_container_variables(message_container) {
+    set_calculated_message_container_variables(message_container, is_revealed) {
         set_timestr(message_container);
 
+        /*
+            If the message needs to be hidden because the sender was muted, we do
+            a few things:
+            1. Hide the sender avatar and name.
+            2. Hide reactions on that message.
+            3. Do not give a background color to that message even if it mentions the
+               current user.
+
+            Further, is a hidden message was just revealed, we make sure to show
+            the sender.
+        */
+
+        const is_hidden =
+            muted_users.is_user_muted(message_container.msg.sender_id) && !is_revealed;
+
+        message_container.is_hidden = is_hidden;
         // Make sure the right thing happens if the message was edited to mention us.
-        message_container.contains_mention = message_container.msg.mentioned;
+        message_container.contains_mention = message_container.msg.mentioned && !is_hidden;
+
+        message_container.include_sender = message_container.include_sender && !is_hidden;
+        if (is_revealed) {
+            // If the message is to be revealed, we show the sender anyways, because the
+            // the first message in the group (which would hold the sender) can still be
+            // hidden.
+            message_container.include_sender = true;
+        }
 
         this._maybe_format_me_message(message_container);
         // Once all other variables are updated
@@ -623,6 +650,8 @@ export class MessageListView {
                 message.starred_status = $t({defaultMessage: "Star"});
             }
 
+            message.url = hash_util.by_conversation_and_time_uri(message);
+
             return {msg: message};
         });
 
@@ -634,7 +663,7 @@ export class MessageListView {
 
         const restore_scroll_position = () => {
             if (
-                !recent_topics.is_visible() &&
+                !recent_topics_util.is_visible() &&
                 list === message_lists.current &&
                 orig_scrolltop_offset !== undefined
             ) {
@@ -1139,11 +1168,11 @@ export class MessageListView {
         header.replaceWith(rendered_recipient_row);
     }
 
-    _rerender_message(message_container, message_content_edited) {
+    _rerender_message(message_container, {message_content_edited, is_revealed}) {
         const row = this.get_row(message_container.msg.id);
         const was_selected = this.list.selected_message() === message_container.msg;
 
-        this.set_calculated_message_container_variables(message_container);
+        this.set_calculated_message_container_variables(message_container, is_revealed);
 
         const rendered_msg = $(this._get_message_template(message_container));
         if (message_content_edited) {
@@ -1155,6 +1184,22 @@ export class MessageListView {
         if (was_selected) {
             this.list.select_id(message_container.msg.id);
         }
+    }
+
+    reveal_hidden_message(message_id) {
+        const message_container = this.message_containers.get(message_id);
+        this._rerender_message(message_container, {
+            message_content_edited: false,
+            is_revealed: true,
+        });
+    }
+
+    hide_revealed_message(message_id) {
+        const message_container = this.message_containers.get(message_id);
+        this._rerender_message(message_container, {
+            message_content_edited: false,
+            is_revealed: false,
+        });
     }
 
     rerender_messages(messages, message_content_edited) {
@@ -1178,7 +1223,7 @@ export class MessageListView {
                 message_groups.push(current_group);
                 current_group = [];
             }
-            this._rerender_message(message_container, message_content_edited);
+            this._rerender_message(message_container, {message_content_edited, is_revealed: false});
         }
 
         if (current_group.length !== 0) {
@@ -1295,6 +1340,11 @@ export class MessageListView {
     }
 
     _maybe_format_me_message(message_container) {
+        if (message_container.is_hidden) {
+            // If the message is to be hidden anyway, no need to render
+            // it differently.
+            return;
+        }
         if (message_container.msg.is_me_message) {
             // Slice the '<p>/me ' off the front, and '</p>' off the first line
             // 'p' tag is sliced off to get sender in the same line as the
